@@ -8,7 +8,14 @@ message.textContent = "Your project starts here.";
 
 app.append(heading, message);
 
-// VARIABBLE SETUP //
+// INTERFACE SETUP //
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+// VARIABLE SETUP //
 
 const cursor = {
   "leftMouseDown": false,
@@ -16,9 +23,9 @@ const cursor = {
   "y": 0,
 };
 
-let currentLine: { x: number; y: number }[] = [];
-const lines: { x: number; y: number }[][] = [];
-const redoLines: [] = [];
+let currentLine: Point[] = [];
+const lines: Point[][] = [];
+const redoLines: Point[][] = [];
 
 const canvasColor = "#ececec";
 
@@ -30,7 +37,8 @@ canvas.height = 500;
 app.append(canvas);
 const context = canvas.getContext("2d");
 
-// if canvas element & its context are found, setup canvas color
+// if canvas element & its context are found,
+// setup canvas color create and mouse listeners
 if (canvas && context) {
   redraw();
 
@@ -90,3 +98,40 @@ function redraw() {
     }
   } else console.log("error: canvas or its context did not load.");
 }
+
+// BUTTON LOGIC //
+
+document.body.append(document.createElement("br"));
+
+const clearButton = document.createElement("button");
+clearButton.innerHTML = "clear";
+document.body.append(clearButton);
+
+clearButton.addEventListener("click", () => {
+  lines.splice(0, lines.length);
+  redraw();
+});
+
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "undo";
+document.body.append(undoButton);
+
+undoButton.addEventListener("click", () => {
+  if (lines.length > 0) {
+    const undoLine = lines.pop();
+    if (undoLine) redoLines.push(undoLine);
+    redraw();
+  }
+});
+
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "redo";
+document.body.append(redoButton);
+
+redoButton.addEventListener("click", () => {
+  if (redoLines.length > 0) {
+    const redoLine = redoLines.pop();
+    if (redoLine) lines.push(redoLine);
+    redraw();
+  }
+});
