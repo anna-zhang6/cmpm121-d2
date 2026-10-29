@@ -18,28 +18,36 @@ interface Point {
 class Line {
   points: Point[];
   color: string;
+  thickness: number;
 
-  constructor(color: string) {
+  constructor(color: string, thickness: number) {
     this.points = [];
     this.color = color;
+    this.thickness = thickness;
   }
 }
 
 // VARIABLE SETUP //
 
 const defaultCursorColor = "#060606";
+const defaultCursorThickness = 1;
+
+const minThicknessSlider = 1;
+const maxThicknessSlider = 100;
+
 const cursor = {
   "leftMouseDown": false,
   "x": 0,
   "y": 0,
 };
 
-let currentLine: Line = new Line(defaultCursorColor);
+let currentLine: Line = new Line(defaultCursorColor, defaultCursorThickness);
 const lines: Line[] = [];
 const redoLines: Line[] = [];
 
 const canvasColor = "#ececec";
 let cursorColor = defaultCursorColor;
+let curThickness = defaultCursorThickness;
 
 // CANVAS SETUP //
 
@@ -60,7 +68,7 @@ if (canvas && context) {
       cursor.x = event.offsetX;
       cursor.y = event.offsetY;
 
-      currentLine = new Line(cursorColor);
+      currentLine = new Line(cursorColor, curThickness);
       lines.push(currentLine);
       redoLines.splice(0, redoLines.length);
       currentLine.points.push({ x: cursor.x, y: cursor.y });
@@ -84,7 +92,7 @@ if (canvas && context) {
   globalThis.addEventListener("mouseup", (event: MouseEvent): void => {
     if (event.button === 0) {
       cursor.leftMouseDown = false;
-      currentLine = new Line(cursorColor);
+      currentLine = new Line(cursorColor, curThickness);
 
       redraw();
     }
@@ -101,6 +109,7 @@ function redraw() {
       if (line.points.length > 1) {
         context.beginPath();
         context.strokeStyle = line.color;
+        context.lineWidth = line.thickness;
         const { x, y } = line.points[0];
         context.moveTo(x, y);
         for (const { x, y } of line.points) {
@@ -112,18 +121,9 @@ function redraw() {
   } else console.log("error: canvas or its context did not load.");
 }
 
-// BUTTON LOGIC //
+// UNDO/REDO/CLEAR BUTTON LOGIC //
 
 document.body.append(document.createElement("br"));
-
-const clearButton = document.createElement("button");
-clearButton.innerHTML = "clear";
-document.body.append(clearButton);
-
-clearButton.addEventListener("click", () => {
-  lines.splice(0, lines.length);
-  redraw();
-});
 
 const undoButton = document.createElement("button");
 undoButton.innerHTML = "undo";
@@ -149,6 +149,17 @@ redoButton.addEventListener("click", () => {
   }
 });
 
+const clearButton = document.createElement("button");
+clearButton.innerHTML = "clear";
+document.body.append(clearButton);
+
+clearButton.addEventListener("click", () => {
+  lines.splice(0, lines.length);
+  redraw();
+});
+
+// COLOR PICKER //
+
 const colorInput = document.createElement("input");
 colorInput.type = "color";
 colorInput.value = defaultCursorColor;
@@ -157,4 +168,24 @@ document.body.append(colorInput);
 colorInput.addEventListener("input", (event: Event) => {
   const target = event.target as HTMLInputElement;
   cursorColor = target.value;
+});
+
+// THICKNESS SLIDER //
+
+const thicknessSliderDisplay = document.createElement("p");
+thicknessSliderDisplay.textContent = "thickness: " + curThickness;
+document.body.append(thicknessSliderDisplay);
+
+const thicknessSlider = document.createElement("input");
+thicknessSlider.type = "range";
+thicknessSlider.min = "" + minThicknessSlider;
+thicknessSlider.max = "" + maxThicknessSlider;
+thicknessSlider.value = "" + defaultCursorThickness;
+thicknessSlider.step = "1";
+document.body.append(thicknessSlider);
+
+thicknessSlider.addEventListener("input", (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  curThickness = Number(target.value);
+  thicknessSliderDisplay.textContent = "thickness: " + curThickness;
 });
