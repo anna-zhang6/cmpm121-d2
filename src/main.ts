@@ -8,26 +8,38 @@ message.textContent = "Your project starts here.";
 
 app.append(heading, message);
 
-// INTERFACE SETUP //
+// INTERFACE/CLASS SETUP //
 
 interface Point {
   x: number;
   y: number;
 }
 
+class Line {
+  points: Point[];
+  color: string;
+
+  constructor(color: string) {
+    this.points = [];
+    this.color = color;
+  }
+}
+
 // VARIABLE SETUP //
 
+const defaultCursorColor = "#060606";
 const cursor = {
   "leftMouseDown": false,
   "x": 0,
   "y": 0,
 };
 
-let currentLine: Point[] = [];
-const lines: Point[][] = [];
-const redoLines: Point[][] = [];
+let currentLine: Line = new Line(defaultCursorColor);
+const lines: Line[] = [];
+const redoLines: Line[] = [];
 
 const canvasColor = "#ececec";
+let cursorColor = defaultCursorColor;
 
 // CANVAS SETUP //
 
@@ -48,10 +60,10 @@ if (canvas && context) {
       cursor.x = event.offsetX;
       cursor.y = event.offsetY;
 
-      currentLine = [];
+      currentLine = new Line(cursorColor);
       lines.push(currentLine);
       redoLines.splice(0, redoLines.length);
-      currentLine.push({ x: cursor.x, y: cursor.y });
+      currentLine.points.push({ x: cursor.x, y: cursor.y });
 
       redraw();
     }
@@ -62,7 +74,7 @@ if (canvas && context) {
       if (cursor.leftMouseDown) {
         cursor.x = event.offsetX;
         cursor.y = event.offsetY;
-        currentLine.push({ x: cursor.x, y: cursor.y });
+        currentLine.points.push({ x: cursor.x, y: cursor.y });
 
         redraw();
       }
@@ -72,7 +84,7 @@ if (canvas && context) {
   globalThis.addEventListener("mouseup", (event: MouseEvent): void => {
     if (event.button === 0) {
       cursor.leftMouseDown = false;
-      currentLine = [];
+      currentLine = new Line(cursorColor);
 
       redraw();
     }
@@ -86,11 +98,12 @@ function redraw() {
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     for (const line of lines) {
-      if (line.length > 1) {
+      if (line.points.length > 1) {
         context.beginPath();
-        const { x, y } = line[0];
+        context.strokeStyle = line.color;
+        const { x, y } = line.points[0];
         context.moveTo(x, y);
-        for (const { x, y } of line) {
+        for (const { x, y } of line.points) {
           context.lineTo(x, y);
         }
         context.stroke();
@@ -134,4 +147,14 @@ redoButton.addEventListener("click", () => {
     if (redoLine) lines.push(redoLine);
     redraw();
   }
+});
+
+const colorInput = document.createElement("input");
+colorInput.type = "color";
+colorInput.value = defaultCursorColor;
+document.body.append(colorInput);
+
+colorInput.addEventListener("input", (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  cursorColor = target.value;
 });
