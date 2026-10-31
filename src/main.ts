@@ -16,7 +16,7 @@ interface Point {
 }
 
 interface Drawable {
-  display(ctx: CanvasRenderingContext2D): void;
+  display(ctx: CanvasRenderingContext2D, canvasScale?: number): void;
   drag(p: Point): void;
 }
 
@@ -35,22 +35,34 @@ class Line implements Drawable {
     this.points.push(p);
   }
 
-  display(ctx: CanvasRenderingContext2D): void {
+  display(ctx: CanvasRenderingContext2D, canvasScale?: number): void {
+    canvasScale = canvasScale || 1;
     ctx.save();
     if (this.points.length === 1) {
       const { x, y } = this.points[0];
       ctx.fillStyle = this.color;
       ctx.beginPath();
-      ctx.arc(x, y, this.thickness / 2, 0, Math.PI * 2);
+      ctx.arc(
+        x * canvasScale,
+        y * canvasScale,
+        this.thickness / 2 * canvasScale,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
     } else {
       ctx.strokeStyle = this.color;
-      ctx.lineWidth = this.thickness;
+      ctx.lineWidth = this.thickness * canvasScale;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
-      ctx.moveTo(this.points[0].x, this.points[0].y);
-      for (const { x, y } of this.points) ctx.lineTo(x, y);
+      ctx.moveTo(
+        this.points[0].x * canvasScale,
+        this.points[0].y * canvasScale,
+      );
+      for (const { x, y } of this.points) {
+        ctx.lineTo(x * canvasScale, y * canvasScale);
+      }
       ctx.stroke();
     }
     ctx.restore();
@@ -72,12 +84,17 @@ class Sticker implements Drawable {
     this.position = p;
   }
 
-  display(ctx: CanvasRenderingContext2D): void {
+  display(ctx: CanvasRenderingContext2D, canvasScale?: number): void {
+    canvasScale = canvasScale || 1;
     ctx.save();
-    ctx.font = `${this.size}px serif`;
+    ctx.font = `${this.size * canvasScale}px serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(this.emoji, this.position.x, this.position.y);
+    ctx.fillText(
+      this.emoji,
+      this.position.x * canvasScale,
+      this.position.y * canvasScale,
+    );
     ctx.restore();
   }
 }
@@ -101,10 +118,13 @@ type Tool = MarkerTool | StickerTool;
 
 const tools: Tool[] = [
   { kind: "marker", label: "thin", thickness: 2 },
-  { kind: "marker", label: "thick", thickness: 8 },
+  { kind: "marker", label: "thick", thickness: 10 },
+  { kind: "marker", label: "thicker", thickness: 50 },
+  { kind: "marker", label: "thickest", thickness: 100 },
   { kind: "sticker", label: "🐱", emoji: "🐱", size: 48 },
   { kind: "sticker", label: "🌟", emoji: "🌟", size: 48 },
   { kind: "sticker", label: "🍕", emoji: "🍕", size: 48 },
+  { kind: "sticker", label: "🫩", emoji: "🫩", size: 48 },
 ];
 
 function createCommand(tool: Tool, p: Point): Drawable {
@@ -119,6 +139,7 @@ function createCommand(tool: Tool, p: Point): Drawable {
 // VARIABLE SETUP //
 const defaultCursorColor = "#060606";
 const canvasColor = "#ececec";
+const canvasExportScale = 4;
 let cursorColor = defaultCursorColor;
 
 const commands: Drawable[] = [];
@@ -145,13 +166,43 @@ function canvasPoint(event: PointerEvent): Point {
   };
 }
 
-function redraw() {
+function redraw(canvasScale?: number) {
+  canvasScale = canvasScale || 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = canvasColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (const command of commands) command.display(ctx);
-  if (activeCommand) activeCommand.display(ctx);
+  for (const command of commands) command.display(ctx, canvasScale);
+  if (activeCommand) activeCommand.display(ctx, canvasScale);
+}
+
+function exportDrawing() {
+  canvas.width *= canvasExportScale;
+  canvas.height *= canvasExportScale;
+
+  redraw(canvasExportScale);
+
+  canvas.toBlob(
+    (blob: Blob | null) => {
+      if (!blob) {
+        console.error("Canvas to Blob conversion failed");
+        return;
+      }
+
+      const blobURL = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "beautifulCreation";
+      link.href = blobURL;
+      link.click();
+      URL.revokeObjectURL(blobURL);
+    },
+    "image/png",
+    1.0,
+  );
+
+  canvas.width /= canvasExportScale;
+  canvas.height /= canvasExportScale;
+  redraw();
 }
 
 canvas.addEventListener("pointerdown", (event: PointerEvent) => {
@@ -208,7 +259,7 @@ for (const tool of tools) {
 }
 updateToolButtons();
 
-// UNDO/REDO/CLEAR BUTTON LOGIC //
+// UNDO/REDO/CLEAR/EXPORT BUTTON LOGIC //
 
 document.body.append(document.createElement("br"));
 
@@ -243,6 +294,14 @@ document.body.append(clearButton);
 clearButton.addEventListener("click", () => {
   commands.splice(0, commands.length);
   redraw();
+});
+
+const exportButton = document.createElement("button");
+exportButton.innerHTML = "export";
+document.body.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  exportDrawing();
 });
 
 // COLOR PICKER //
