@@ -1,10 +1,10 @@
 const app = document.querySelector<HTMLElement>("#app")!;
 
 const heading = document.createElement("h1");
-heading.textContent = "D2 project";
+heading.textContent = "Epic Drawing App";
 
 const message = document.createElement("p");
-message.textContent = "Your project starts here.";
+message.textContent = "Your beautiful creation awaits you :D";
 
 app.append(heading, message);
 
